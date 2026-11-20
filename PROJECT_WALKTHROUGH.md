@@ -2,53 +2,47 @@
 
 ## 1. Executive Summary & Architecture Overview
 
-Project 41 is an enterprise-grade retail inventory optimization system combining **machine learning-based demand forecasting** with a **deterministic stockout risk engine**. It operates on a multi-SKU catalog of 16 products spanning 4 retail categories, tracking daily sales, dynamic pricing elasticity, promotional campaigns, holidays, and stockout depletion dynamics across 5,840 chronological observations.
+Project 41 is an enterprise-grade retail inventory optimization system combining **machine learning-based demand forecasting** with a **deterministic stockout risk engine**. It operates on the real **Kaggle FMCG Dataset (`data/FMCG_2022_2024.csv`)** covering 190,757 observations across 30 SKUs (`Milk`, `Yogurt`, `ReadyMeal`, `Juice`, `SnackBar`) from `2022-01-21` to `2024-12-31`.
 
 ### High-Level System Architecture
 
 ```mermaid
 flowchart TD
-    A["Raw Sales Stream\n(data/retail_sales.csv\n16 Products, 5,840 Records)"] --> B["Leakage-Safe Feature Pipeline\n(pipeline/features.py\nShifted Lags & Rolling Windows)"]
-    B --> C["Chronological 80/20 Holdout Split\n& TimeSeriesSplit CV\n(pipeline/train.py)"]
-    C --> D1["Ridge Regression\n(Linear Baseline)"]
-    C --> D2["Random Forest Regressor\n(Ensemble Trees)"]
-    C --> D3["HistGradientBoosting\n(Gradient Boosting Winner)"]
-    D1 & D2 & D3 --> E["Model Benchmark & Serialization\n(artifacts/model_comparison.json\nartifacts/demand_model.joblib)"]
-    E --> F["FastAPI Engine (backend/main.py)\nSingle-Port Static Mount"]
-    F --> G["Deterministic Risk Engine\n(backend/risk_engine.py)\nLead Time Demand, SS, ROP, 3-Tiers"]
-    G --> H["Swiss/Industrial Frontend\n(frontend/index.html & styles.css)\nInteractive Scenario & Batch CSV"]
+    A["Raw FMCG Sales Stream\n(data/FMCG_2022_2024.csv\n190,757 rows across channels/regions)"] --> B["Daily SKU Aggregation Step\n(groupby(['date', 'sku']))\n24,945 aggregated daily records"]
+    B --> C["Leakage-Safe Feature Pipeline\n(pipeline/features.py\nShifted Lags & Rolling Windows)"]
+    C --> D["Chronological 80/20 Holdout Split\n& TimeSeriesSplit CV\n(pipeline/train.py)"]
+    D --> E1["Ridge Regression\n(Linear Baseline)"]
+    D --> E2["Random Forest Regressor\n(Ensemble Winner)"]
+    D --> E3["HistGradientBoosting\n(Gradient Boosting)"]
+    E1 & E2 & E3 --> F["Model Benchmark & Serialization\n(artifacts/model_comparison.json\nartifacts/demand_model.joblib)"]
+    F --> G["FastAPI Engine (backend/main.py)\nSingle-Port Static Mount"]
+    G --> H["Deterministic Risk Engine\n(backend/risk_engine.py)\nLead Time Demand, SS, ROP, 3-Tiers"]
+    H --> I["Swiss/Industrial Frontend\n(frontend/index.html & styles.css)\nInteractive Scenario & Batch CSV"]
 ```
 
 ---
 
-## 2. Dataset Specification (`data/retail_sales.csv`)
+## 2. Dataset Specification (`data/FMCG_2022_2024.csv`)
 
-The offline realistic dataset contains 5,840 records generated across 16 products over a full 365-day calendar year (2024-01-01 to 2024-12-31).
+The dataset contains 190,757 multi-channel, multi-region FMCG transactions from `2022-01-21` to `2024-12-31`.
 
-| Field | Type | Description |
-|---|---|---|
-| `date` | String (YYYY-MM-DD) | Chronological observation date |
-| `product_id` | String | Unique product identifier (`PRD-01` to `PRD-16`) |
-| `sku_id` | String | Enterprise SKU alias (`SKU-E101`, `SKU-G201`, etc.) |
-| `product_name` | String | Canonical retail product name |
-| `category` | String | Electronics, Groceries, Apparel, Home & Garden |
-| `base_price` | Float | MSRP reference price |
-| `price` | Float | Actual selling price with promotion discounts |
-| `competitor_price` | Float | Competing marketplace price |
-| `promotion` | Integer | Binary flag (1 if active campaign, 0 otherwise) |
-| `holiday` | Integer | Binary flag (1 if key retail holiday, 0 otherwise) |
-| `inventory_level` | Integer | Simulated physical stock on hand |
-| `lead_time_days` | Integer | Supplier replenishment cycle in days |
-| `stockout_flag` | Integer | 1 if stock was exhausted, 0 otherwise |
-| `units_sold` | Integer | Actual units demanded and fulfilled |
+### Critical Aggregation Step
+Because each `(date, sku)` pair has multiple rows across channels (`Retail`, `Online`, `Wholesale`), regions (`North`, `South`, etc.), and pack types, it is aggregated to daily SKU totals before computing time-series lags:
+- `units_sold`: `sum` (target variable)
+- `stock_available`: `sum`
+- `delivered_qty`: `sum`
+- `price_unit`: `mean` (rounded to 2 decimals)
+- `promotion_flag`: `max`
+- `delivery_days`: `mean` (rounded to integer for default lead time)
+- `brand`, `segment`, `category`: `first`
+
+This produces **24,945 daily SKU observations** across the 30 FMCG SKUs.
 
 ---
 
 ## 3. Leakage-Safe Chronological Feature Engineering
 
-To guarantee zero future data leakage during training and production inference, all lag and rolling statistical features are computed strictly using past observations $(t-1, t-7, t-14)$ per product.
-
-### Required Feature Specifications
+All lag and rolling features are computed strictly using past observations $(t-1, t-7, t-14)$ per SKU:
 
 1. `day_of_week`: Day of week index (0 = Monday, 6 = Sunday)
 2. `month`: Calendar month (1 to 12)
@@ -59,35 +53,23 @@ To guarantee zero future data leakage during training and production inference, 
 7. `rolling_mean_7`: 7-day rolling average of sales strictly up to $t-1$
 8. `rolling_std_7`: 7-day rolling standard deviation of sales up to $t-1$
 9. `rolling_mean_30`: 30-day rolling average of sales up to $t-1$
-10. `price`, `competitor_price`, `price_ratio`, `promotion`, `holiday`, `product_encoded`
-
-```python
-# Guaranteed Shifted Construction (Zero Future Leakage)
-data["lag_1"] = grouped.shift(1)
-data["lag_7"] = grouped.shift(7)
-data["lag_14"] = grouped.shift(14)
-
-data["_target_t_minus_1"] = grouped.shift(1)
-data["rolling_mean_7"] = grouped_prev.transform(lambda s: s.rolling(7, min_periods=1).mean())
-data["rolling_std_7"] = grouped_prev.transform(lambda s: s.rolling(7, min_periods=1).std().fillna(0.0))
-data["rolling_mean_30"] = grouped_prev.transform(lambda s: s.rolling(30, min_periods=1).mean())
-```
+10. `price_unit`, `promotion_flag`, `product_encoded`
 
 ---
 
 ## 4. 3-Model Benchmark & Chronological 80/20 Evaluation
 
-The dataset is partitioned chronologically into an 80% train window (first ~292 days) and a 20% holdout test window (final 73 days) without random shuffling. Models are tuned using `TimeSeriesSplit(n_splits=3)` with `RandomizedSearchCV`.
+The aggregated daily series is partitioned chronologically into an 80% train window (18,465 rows: `2022-01-21` to `2024-05-29`) and a 20% holdout test window (6,480 rows: `2024-05-30` to `2024-12-31`).
 
-### Model Evaluation Results (Holdout Test Set)
+### Benchmark Results (Holdout Test Set)
 
 | Model | MAE (Units) | RMSE (Units) | $R^2$ Score | WAPE Error | Architecture Type |
 |---|---|---|---|---|---|
-| **HistGradientBoosting** (Winner) | **3.82** | **5.21** | **0.961** | **8.14%** | Gradient Boosted Trees |
-| **Random Forest Regressor** | 4.15 | 5.64 | 0.952 | 8.85% | Bagged Decision Trees |
-| **Ridge Regression** | 6.78 | 8.92 | 0.884 | 14.45% | L2-Regularized Linear Baseline |
+| **Random Forest Regressor** (Winner) | **25.13** | **32.46** | **0.4664** | **17.89%** | Bagged Ensemble Trees |
+| **Ridge Regression** | 25.23 | 32.59 | 0.4619 | 17.96% | L2-Regularized Linear Baseline |
+| **HistGradientBoosting** | 25.70 | 32.88 | 0.4523 | 18.30% | Gradient Boosted Trees |
 
-The winning model is serialized along with complete feature metadata to `artifacts/demand_model.joblib`. Full benchmark metrics are emitted to `artifacts/model_comparison.json`.
+The winning model is serialized to `artifacts/demand_model.joblib`, with complete comparison data in `artifacts/model_comparison.json`.
 
 ---
 
@@ -114,16 +96,9 @@ The risk engine computes deterministic safety buffer and replenishment threshold
 
 ### Exact 3-Tier Risk Hierarchy
 
-The tier classification is evaluated strictly in this deterministic sequence:
-
-```mermaid
-flowchart TD
-    Start["Check Current Stock (I)"] --> C1{"I < predicted_daily_demand * lead_time_days?"}
-    C1 -- Yes --> R1["CRITICAL\nStockout imminent before shipment arrives"]
-    C1 -- No --> C2{"I < predicted_7day_demand + safety_stock?"}
-    C2 -- Yes --> R2["WARNING / REORDER SOON\nStock below Reorder Point"]
-    C2 -- No --> R3["HEALTHY\nBuffer safe above Reorder Point"]
-```
+1. `CRITICAL`: if $\text{current\_stock} < \text{lead\_time\_demand}$
+2. `WARNING / REORDER SOON`: elif $\text{current\_stock} < \text{reorder\_point}$
+3. `HEALTHY`: else $\text{current\_stock} \ge \text{reorder\_point}$
 
 ---
 
@@ -133,7 +108,7 @@ flowchart TD
 |---|---|---|
 | `GET` | `/health` / `/api/health` | Service health status, model metadata, uptime |
 | `GET` | `/api/metrics` | 3-Model benchmark results and feature importances |
-| `GET` | `/api/products` / `/api/skus` | Catalog of 16 products with baseline statistics |
+| `GET` | `/api/products` / `/api/skus` | Catalog of 30 FMCG SKUs with baseline statistics |
 | `POST` | `/api/predict` | Single scenario simulation (accepts `current_stock`, `demand_multiplier`, lags) |
 | `POST` | `/api/batch-predict` | Multipart CSV upload & JSON batch evaluation with exact 3-tier summaries |
 | `GET` | `/api/export/batch-template` | Official CSV template for batch uploads |
@@ -150,7 +125,6 @@ The frontend is served from a single port via FastAPI's `StaticFiles` at `/`:
   - `HEALTHY`: `#15803D` (Forest Green)
   - `WARNING / REORDER SOON`: `#B45309` (Amber)
   - `CRITICAL`: `#B91C1C` (Deep Red)
-- **Features**: Live interactive scenario console, drag-and-drop CSV batch upload, real-time KPI tiles, Chart.js threshold comparisons, and CSV export.
 
 ---
 
@@ -167,5 +141,4 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.9
 ```
-
-With `data/retail_sales.csv` and `artifacts/` committed to Git, Render starts cold within seconds without retraining.
+All artifacts in `artifacts/` are tracked so offline startup works without retraining on cold boot.

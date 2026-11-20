@@ -1,149 +1,278 @@
 {
-  "dataset_rows": 5856,
-  "product_count": 16,
-  "date_start": "2024-01-01",
+  "dataset_rows_raw": 190757,
+  "aggregated_daily_sku_rows": 24945,
+  "product_count": 30,
+  "date_start": "2022-01-21",
   "date_end": "2024-12-31",
-  "total_units_sold": 378165,
-  "average_daily_demand": 64.58,
-  "overall_stockout_rate_pct": 0.56,
+  "total_units_sold": 3799824,
+  "average_daily_demand": 152.33,
   "category_metrics": {
-    "Apparel": {
-      "total_units_sold": 77650,
-      "mean_daily_units": 53.04,
-      "mean_price": 64.2,
-      "stockout_occurrences": 15
+    "Juice": {
+      "total_units_sold": 124349,
+      "mean_daily_units": 137.4,
+      "mean_price": 5.26
     },
-    "Electronics": {
-      "total_units_sold": 59206,
-      "mean_daily_units": 40.44,
-      "mean_price": 175.68,
-      "stockout_occurrences": 10
+    "Milk": {
+      "total_units_sold": 782734,
+      "mean_daily_units": 134.12,
+      "mean_price": 5.22
     },
-    "Groceries": {
-      "total_units_sold": 173734,
-      "mean_daily_units": 118.67,
-      "mean_price": 11.96,
-      "stockout_occurrences": 6
+    "ReadyMeal": {
+      "total_units_sold": 678834,
+      "mean_daily_units": 151.97,
+      "mean_price": 5.27
     },
-    "Home & Garden": {
-      "total_units_sold": 67575,
-      "mean_daily_units": 46.16,
-      "mean_price": 86.08,
-      "stockout_occurrences": 2
+    "SnackBar": {
+      "total_units_sold": 647325,
+      "mean_daily_units": 153.21,
+      "mean_price": 5.24
+    },
+    "Yogurt": {
+      "total_units_sold": 1566582,
+      "mean_daily_units": 164.7,
+      "mean_price": 5.26
     }
   },
   "product_metrics": {
-    "PRD-01": {
-      "product_name": "4K Ultra-HD Smart Monitor 27-inch",
-      "category": "Electronics",
-      "mean_demand": 29.87,
-      "std_demand": 12.2,
-      "total_sold": 10931
+    "JU-021": {
+      "category": "Juice",
+      "mean_demand": 137.4,
+      "std_demand": 46.21,
+      "total_sold": 124349,
+      "avg_price": 5.26,
+      "lead_time_days": 3.03
     },
-    "PRD-02": {
-      "product_name": "Noise-Cancelling Wireless Headphones",
-      "category": "Electronics",
-      "mean_demand": 52.28,
-      "std_demand": 23.73,
-      "total_sold": 19135
+    "MI-002": {
+      "category": "Milk",
+      "mean_demand": 144.53,
+      "std_demand": 43.92,
+      "total_sold": 95534,
+      "avg_price": 5.24,
+      "lead_time_days": 3.02
     },
-    "PRD-03": {
-      "product_name": "Mechanical RGB Gaming Keyboard",
-      "category": "Electronics",
-      "mean_demand": 44.77,
-      "std_demand": 18.1,
-      "total_sold": 16387
+    "MI-006": {
+      "category": "Milk",
+      "mean_demand": 123.26,
+      "std_demand": 39.07,
+      "total_sold": 132623,
+      "avg_price": 5.24,
+      "lead_time_days": 2.99
     },
-    "PRD-04": {
-      "product_name": "Smart Home Mesh Wi-Fi 6 Router",
-      "category": "Electronics",
-      "mean_demand": 34.84,
-      "std_demand": 12.64,
-      "total_sold": 12753
+    "MI-008": {
+      "category": "Milk",
+      "mean_demand": 131.57,
+      "std_demand": 44.31,
+      "total_sold": 82888,
+      "avg_price": 5.21,
+      "lead_time_days": 2.99
     },
-    "PRD-05": {
-      "product_name": "Organic Whole Bean Coffee 1kg",
-      "category": "Groceries",
-      "mean_demand": 129.65,
-      "std_demand": 42.2,
-      "total_sold": 47451
+    "MI-011": {
+      "category": "Milk",
+      "mean_demand": 132.64,
+      "std_demand": 45.9,
+      "total_sold": 84626,
+      "avg_price": 5.22,
+      "lead_time_days": 3.01
     },
-    "PRD-06": {
-      "product_name": "Extra Virgin Olive Oil 750ml",
-      "category": "Groceries",
-      "mean_demand": 103.06,
-      "std_demand": 37.8,
-      "total_sold": 37719
+    "MI-022": {
+      "category": "Milk",
+      "mean_demand": 123.31,
+      "std_demand": 36.38,
+      "total_sold": 101115,
+      "avg_price": 5.24,
+      "lead_time_days": 3.0
     },
-    "PRD-07": {
-      "product_name": "Artisanal Sourdough Bread Loaf",
-      "category": "Groceries",
-      "mean_demand": 166.45,
-      "std_demand": 60.22,
-      "total_sold": 60922
+    "MI-023": {
+      "category": "Milk",
+      "mean_demand": 142.76,
+      "std_demand": 37.92,
+      "total_sold": 133624,
+      "avg_price": 5.2,
+      "lead_time_days": 3.0
     },
-    "PRD-08": {
-      "product_name": "Pure Clover Raw Honey 500g",
-      "category": "Groceries",
-      "mean_demand": 75.52,
-      "std_demand": 22.31,
-      "total_sold": 27642
+    "MI-026": {
+      "category": "Milk",
+      "mean_demand": 141.7,
+      "std_demand": 39.7,
+      "total_sold": 152324,
+      "avg_price": 5.22,
+      "lead_time_days": 3.01
     },
-    "PRD-09": {
-      "product_name": "Breathable Performance Running Shoes",
-      "category": "Apparel",
-      "mean_demand": 49.67,
-      "std_demand": 23.82,
-      "total_sold": 18179
+    "RE-004": {
+      "category": "ReadyMeal",
+      "mean_demand": 151.07,
+      "std_demand": 39.36,
+      "total_sold": 149559,
+      "avg_price": 5.27,
+      "lead_time_days": 2.99
     },
-    "PRD-10": {
-      "product_name": "Weatherproof All-Season Outdoor Jacket",
-      "category": "Apparel",
-      "mean_demand": 28.8,
-      "std_demand": 12.66,
-      "total_sold": 10541
+    "RE-007": {
+      "category": "ReadyMeal",
+      "mean_demand": 150.47,
+      "std_demand": 41.28,
+      "total_sold": 146705,
+      "avg_price": 5.25,
+      "lead_time_days": 3.03
     },
-    "PRD-11": {
-      "product_name": "Merino Wool Thermal Crew Socks (3-Pack)",
-      "category": "Apparel",
-      "mean_demand": 61.01,
-      "std_demand": 20.02,
-      "total_sold": 22330
+    "RE-015": {
+      "category": "ReadyMeal",
+      "mean_demand": 149.62,
+      "std_demand": 40.31,
+      "total_sold": 144534,
+      "avg_price": 5.28,
+      "lead_time_days": 2.99
     },
-    "PRD-12": {
-      "product_name": "Quick-Dry Moisture-Wicking Training Tee",
-      "category": "Apparel",
-      "mean_demand": 72.68,
-      "std_demand": 30.09,
-      "total_sold": 26600
+    "RE-017": {
+      "category": "ReadyMeal",
+      "mean_demand": 154.52,
+      "std_demand": 45.34,
+      "total_sold": 116352,
+      "avg_price": 5.28,
+      "lead_time_days": 2.99
     },
-    "PRD-13": {
-      "product_name": "Cordless Brushless Drill Kit 20V",
-      "category": "Home & Garden",
-      "mean_demand": 39.16,
-      "std_demand": 15.64,
-      "total_sold": 14334
+    "RE-025": {
+      "category": "ReadyMeal",
+      "mean_demand": 155.41,
+      "std_demand": 46.36,
+      "total_sold": 121684,
+      "avg_price": 5.27,
+      "lead_time_days": 2.99
     },
-    "PRD-14": {
-      "product_name": "True HEPA Air Purifier Filter Replacement",
-      "category": "Home & Garden",
-      "mean_demand": 63.88,
-      "std_demand": 17.56,
-      "total_sold": 23379
+    "SN-010": {
+      "category": "SnackBar",
+      "mean_demand": 158.61,
+      "std_demand": 46.03,
+      "total_sold": 121499,
+      "avg_price": 5.26,
+      "lead_time_days": 2.96
     },
-    "PRD-15": {
-      "product_name": "Smart Programmable Thermostat",
-      "category": "Home & Garden",
-      "mean_demand": 29.69,
-      "std_demand": 10.38,
-      "total_sold": 10865
+    "SN-013": {
+      "category": "SnackBar",
+      "mean_demand": 142.83,
+      "std_demand": 50.25,
+      "total_sold": 103410,
+      "avg_price": 5.23,
+      "lead_time_days": 3.01
     },
-    "PRD-16": {
-      "product_name": "Heavy-Duty Steel Garden Pruner Shears",
-      "category": "Home & Garden",
-      "mean_demand": 51.9,
-      "std_demand": 21.44,
-      "total_sold": 18997
+    "SN-019": {
+      "category": "SnackBar",
+      "mean_demand": 160.46,
+      "std_demand": 49.55,
+      "total_sold": 109593,
+      "avg_price": 5.27,
+      "lead_time_days": 3.02
+    },
+    "SN-027": {
+      "category": "SnackBar",
+      "mean_demand": 136.71,
+      "std_demand": 40.54,
+      "total_sold": 115386,
+      "avg_price": 5.23,
+      "lead_time_days": 3.01
+    },
+    "SN-028": {
+      "category": "SnackBar",
+      "mean_demand": 163.51,
+      "std_demand": 52.6,
+      "total_sold": 101706,
+      "avg_price": 5.21,
+      "lead_time_days": 3.03
+    },
+    "SN-030": {
+      "category": "SnackBar",
+      "mean_demand": 163.36,
+      "std_demand": 48.85,
+      "total_sold": 95731,
+      "avg_price": 5.23,
+      "lead_time_days": 3.04
+    },
+    "YO-001": {
+      "category": "Yogurt",
+      "mean_demand": 147.53,
+      "std_demand": 54.77,
+      "total_sold": 146646,
+      "avg_price": 5.3,
+      "lead_time_days": 3.04
+    },
+    "YO-003": {
+      "category": "Yogurt",
+      "mean_demand": 166.07,
+      "std_demand": 57.43,
+      "total_sold": 137173,
+      "avg_price": 5.25,
+      "lead_time_days": 3.01
+    },
+    "YO-005": {
+      "category": "Yogurt",
+      "mean_demand": 171.8,
+      "std_demand": 60.1,
+      "total_sold": 176095,
+      "avg_price": 5.24,
+      "lead_time_days": 3.02
+    },
+    "YO-009": {
+      "category": "Yogurt",
+      "mean_demand": 164.67,
+      "std_demand": 51.73,
+      "total_sold": 145236,
+      "avg_price": 5.2,
+      "lead_time_days": 3.02
+    },
+    "YO-012": {
+      "category": "Yogurt",
+      "mean_demand": 169.05,
+      "std_demand": 58.33,
+      "total_sold": 170575,
+      "avg_price": 5.26,
+      "lead_time_days": 2.99
+    },
+    "YO-014": {
+      "category": "Yogurt",
+      "mean_demand": 149.29,
+      "std_demand": 53.66,
+      "total_sold": 148845,
+      "avg_price": 5.28,
+      "lead_time_days": 2.98
+    },
+    "YO-016": {
+      "category": "Yogurt",
+      "mean_demand": 168.78,
+      "std_demand": 66.29,
+      "total_sold": 132999,
+      "avg_price": 5.29,
+      "lead_time_days": 3.01
+    },
+    "YO-018": {
+      "category": "Yogurt",
+      "mean_demand": 165.06,
+      "std_demand": 53.57,
+      "total_sold": 99863,
+      "avg_price": 5.23,
+      "lead_time_days": 3.02
+    },
+    "YO-020": {
+      "category": "Yogurt",
+      "mean_demand": 171.35,
+      "std_demand": 62.85,
+      "total_sold": 121833,
+      "avg_price": 5.24,
+      "lead_time_days": 2.98
+    },
+    "YO-024": {
+      "category": "Yogurt",
+      "mean_demand": 171.93,
+      "std_demand": 60.02,
+      "total_sold": 109519,
+      "avg_price": 5.33,
+      "lead_time_days": 2.99
+    },
+    "YO-029": {
+      "category": "Yogurt",
+      "mean_demand": 171.29,
+      "std_demand": 59.79,
+      "total_sold": 177798,
+      "avg_price": 5.26,
+      "lead_time_days": 3.0
     }
   }
 }

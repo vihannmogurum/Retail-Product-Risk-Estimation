@@ -81,8 +81,9 @@ async function loadProducts() {
 
     productsCache.forEach((prod) => {
       const opt = document.createElement("option");
-      opt.value = prod.product_id;
-      opt.textContent = `${prod.product_id} [${prod.sku_id}] — ${prod.product_name} (${prod.category})`;
+      const pid = prod.product_id || prod.sku;
+      opt.value = pid;
+      opt.textContent = `${pid} — ${prod.product_name} [${prod.category}]`;
       select.appendChild(opt);
     });
 
@@ -92,7 +93,7 @@ async function loadProducts() {
     }
 
     select.addEventListener("change", (e) => {
-      const selected = productsCache.find((p) => p.product_id === e.target.value);
+      const selected = productsCache.find((p) => (p.product_id || p.sku) === e.target.value);
       if (selected) populateScenarioDefaults(selected);
     });
 

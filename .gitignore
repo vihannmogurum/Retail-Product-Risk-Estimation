@@ -28,6 +28,8 @@ Thumbs.db
 # Explicitly track dataset and serialized artifacts for offline Render startup
 !data/
 !data/retail_sales.csv
+!data/FMCG_2022_2024.csv
 !artifacts/
 !artifacts/*.joblib
 !artifacts/*.json
+!artifacts/*.png

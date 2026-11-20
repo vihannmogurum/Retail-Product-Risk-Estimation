@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "Project 41 - Retail Product Demand Estimation and Stockout Risk Analysis-III",
+    "name": "Project 41 - Retail Product Demand Estimation and Stockout Risk Analysis-III (FMCG)",
     "_postman_id": "c1f7a0b3-41e9-4e12-8d77-d65e998a4101",
-    "description": "Enterprise Postman collection for demand estimation and stockout risk analysis API.",
+    "description": "Enterprise Postman collection for demand estimation and stockout risk analysis API on Kaggle FMCG dataset.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -54,7 +54,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"product_id\": \"PRD-01\",\n  \"date\": \"2025-02-15\",\n  \"current_stock\": 35,\n  \"lead_time_days\": 7,\n  \"demand_multiplier\": 1.0,\n  \"price\": 289.99,\n  \"competitor_price\": 295.00,\n  \"promotion\": 0,\n  \"holiday\": 0\n}"
+          "raw": "{\n  \"product_id\": \"MI-006\",\n  \"date\": \"2025-02-15\",\n  \"current_stock\": 120,\n  \"lead_time_days\": 3,\n  \"demand_multiplier\": 1.0,\n  \"price_unit\": 4.50,\n  \"promotion_flag\": 0\n}"
         },
         "url": {
           "raw": "{{base_url}}/api/predict",
@@ -75,7 +75,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "[\n  {\"product_id\": \"PRD-01\", \"current_stock\": 20, \"lead_time_days\": 7},\n  {\"product_id\": \"PRD-02\", \"current_stock\": 110, \"lead_time_days\": 5},\n  {\"product_id\": \"PRD-05\", \"current_stock\": 45, \"lead_time_days\": 3}\n]"
+          "raw": "[\n  {\"product_id\": \"MI-006\", \"current_stock\": 40, \"lead_time_days\": 3},\n  {\"product_id\": \"YO-029\", \"current_stock\": 350, \"lead_time_days\": 2},\n  {\"product_id\": \"RE-004\", \"current_stock\": 50, \"lead_time_days\": 4}\n]"
         },
         "url": {
           "raw": "{{base_url}}/api/batch-predict",
@@ -102,13 +102,13 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/api/history?product_id=PRD-01",
+          "raw": "{{base_url}}/api/history?product_id=MI-006",
           "host": ["{{base_url}}"],
           "path": ["api", "history"],
           "query": [
             {
               "key": "product_id",
-              "value": "PRD-01"
+              "value": "MI-006"
             }
           ]
         }
