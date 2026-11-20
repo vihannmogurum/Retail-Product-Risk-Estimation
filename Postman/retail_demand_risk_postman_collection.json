@@ -1,0 +1,131 @@
+{
+  "info": {
+    "name": "Project 41 - Retail Product Demand Estimation and Stockout Risk Analysis-III",
+    "_postman_id": "c1f7a0b3-41e9-4e12-8d77-d65e998a4101",
+    "description": "Comprehensive Postman Collection covering demand estimation, risk classification, and batch evaluations.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 System Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        },
+        "description": "Verifies API operational status, uptime, model status, and version."
+      }
+    },
+    {
+      "name": "02 3-Model Benchmark Metrics",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/metrics",
+          "host": ["{{base_url}}"],
+          "path": ["api", "metrics"]
+        },
+        "description": "Returns MAE, RMSE, R2, and WAPE comparison across Ridge, Random Forest, and Gradient Boosting."
+      }
+    },
+    {
+      "name": "03 Product & SKU Catalog",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/products",
+          "host": ["{{base_url}}"],
+          "path": ["api", "products"]
+        },
+        "description": "Lists all 16 retail products with categories, base prices, lead times, and baseline statistics."
+      }
+    },
+    {
+      "name": "04 Single Scenario Prediction",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product_id\": \"PRD-01\",\n  \"date\": \"2025-02-15\",\n  \"current_stock\": 35,\n  \"lead_time_days\": 7,\n  \"demand_multiplier\": 1.0,\n  \"price\": 289.99,\n  \"competitor_price\": 295.00,\n  \"promotion\": 0,\n  \"holiday\": 0\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/predict",
+          "host": ["{{base_url}}"],
+          "path": ["api", "predict"]
+        },
+        "description": "Executes demand prediction and deterministic 3-tier risk engine evaluation."
+      }
+    },
+    {
+      "name": "05 Batch Scenario Evaluation (JSON)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n  {\"product_id\": \"PRD-01\", \"current_stock\": 20, \"lead_time_days\": 7},\n  {\"product_id\": \"PRD-02\", \"current_stock\": 110, \"lead_time_days\": 5},\n  {\"product_id\": \"PRD-05\", \"current_stock\": 45, \"lead_time_days\": 3}\n]"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/batch-predict",
+          "host": ["{{base_url}}"],
+          "path": ["api", "batch-predict"]
+        },
+        "description": "Submits multiple SKU scenarios and returns summary KPIs plus row-by-row risk metrics."
+      }
+    },
+    {
+      "name": "06 Download Batch CSV Template",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/export/batch-template",
+          "host": ["{{base_url}}"],
+          "path": ["api", "export", "batch-template"]
+        },
+        "description": "Downloads the official CSV template required for multipart CSV upload."
+      }
+    },
+    {
+      "name": "07 Historical Time-Series Sample",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/history?product_id=PRD-01",
+          "host": ["{{base_url}}"],
+          "path": ["api", "history"],
+          "query": [
+            {
+              "key": "product_id",
+              "value": "PRD-01"
+            }
+          ]
+        },
+        "description": "Retrieves recent 30-day chronological actual vs inventory levels for trend visualization."
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000"
+    }
+  ]
+}

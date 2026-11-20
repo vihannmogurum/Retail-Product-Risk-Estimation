@@ -1,0 +1,149 @@
+{
+  "dataset_rows": 5856,
+  "product_count": 16,
+  "date_start": "2024-01-01",
+  "date_end": "2024-12-31",
+  "total_units_sold": 378165,
+  "average_daily_demand": 64.58,
+  "overall_stockout_rate_pct": 0.56,
+  "category_metrics": {
+    "Apparel": {
+      "total_units_sold": 77650,
+      "mean_daily_units": 53.04,
+      "mean_price": 64.2,
+      "stockout_occurrences": 15
+    },
+    "Electronics": {
+      "total_units_sold": 59206,
+      "mean_daily_units": 40.44,
+      "mean_price": 175.68,
+      "stockout_occurrences": 10
+    },
+    "Groceries": {
+      "total_units_sold": 173734,
+      "mean_daily_units": 118.67,
+      "mean_price": 11.96,
+      "stockout_occurrences": 6
+    },
+    "Home & Garden": {
+      "total_units_sold": 67575,
+      "mean_daily_units": 46.16,
+      "mean_price": 86.08,
+      "stockout_occurrences": 2
+    }
+  },
+  "product_metrics": {
+    "PRD-01": {
+      "product_name": "4K Ultra-HD Smart Monitor 27-inch",
+      "category": "Electronics",
+      "mean_demand": 29.87,
+      "std_demand": 12.2,
+      "total_sold": 10931
+    },
+    "PRD-02": {
+      "product_name": "Noise-Cancelling Wireless Headphones",
+      "category": "Electronics",
+      "mean_demand": 52.28,
+      "std_demand": 23.73,
+      "total_sold": 19135
+    },
+    "PRD-03": {
+      "product_name": "Mechanical RGB Gaming Keyboard",
+      "category": "Electronics",
+      "mean_demand": 44.77,
+      "std_demand": 18.1,
+      "total_sold": 16387
+    },
+    "PRD-04": {
+      "product_name": "Smart Home Mesh Wi-Fi 6 Router",
+      "category": "Electronics",
+      "mean_demand": 34.84,
+      "std_demand": 12.64,
+      "total_sold": 12753
+    },
+    "PRD-05": {
+      "product_name": "Organic Whole Bean Coffee 1kg",
+      "category": "Groceries",
+      "mean_demand": 129.65,
+      "std_demand": 42.2,
+      "total_sold": 47451
+    },
+    "PRD-06": {
+      "product_name": "Extra Virgin Olive Oil 750ml",
+      "category": "Groceries",
+      "mean_demand": 103.06,
+      "std_demand": 37.8,
+      "total_sold": 37719
+    },
+    "PRD-07": {
+      "product_name": "Artisanal Sourdough Bread Loaf",
+      "category": "Groceries",
+      "mean_demand": 166.45,
+      "std_demand": 60.22,
+      "total_sold": 60922
+    },
+    "PRD-08": {
+      "product_name": "Pure Clover Raw Honey 500g",
+      "category": "Groceries",
+      "mean_demand": 75.52,
+      "std_demand": 22.31,
+      "total_sold": 27642
+    },
+    "PRD-09": {
+      "product_name": "Breathable Performance Running Shoes",
+      "category": "Apparel",
+      "mean_demand": 49.67,
+      "std_demand": 23.82,
+      "total_sold": 18179
+    },
+    "PRD-10": {
+      "product_name": "Weatherproof All-Season Outdoor Jacket",
+      "category": "Apparel",
+      "mean_demand": 28.8,
+      "std_demand": 12.66,
+      "total_sold": 10541
+    },
+    "PRD-11": {
+      "product_name": "Merino Wool Thermal Crew Socks (3-Pack)",
+      "category": "Apparel",
+      "mean_demand": 61.01,
+      "std_demand": 20.02,
+      "total_sold": 22330
+    },
+    "PRD-12": {
+      "product_name": "Quick-Dry Moisture-Wicking Training Tee",
+      "category": "Apparel",
+      "mean_demand": 72.68,
+      "std_demand": 30.09,
+      "total_sold": 26600
+    },
+    "PRD-13": {
+      "product_name": "Cordless Brushless Drill Kit 20V",
+      "category": "Home & Garden",
+      "mean_demand": 39.16,
+      "std_demand": 15.64,
+      "total_sold": 14334
+    },
+    "PRD-14": {
+      "product_name": "True HEPA Air Purifier Filter Replacement",
+      "category": "Home & Garden",
+      "mean_demand": 63.88,
+      "std_demand": 17.56,
+      "total_sold": 23379
+    },
+    "PRD-15": {
+      "product_name": "Smart Programmable Thermostat",
+      "category": "Home & Garden",
+      "mean_demand": 29.69,
+      "std_demand": 10.38,
+      "total_sold": 10865
+    },
+    "PRD-16": {
+      "product_name": "Heavy-Duty Steel Garden Pruner Shears",
+      "category": "Home & Garden",
+      "mean_demand": 51.9,
+      "std_demand": 21.44,
+      "total_sold": 18997
+    }
+  }
+}
