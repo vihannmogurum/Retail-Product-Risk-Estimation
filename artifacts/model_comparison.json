@@ -1,102 +1,91 @@
 {
-  "timestamp": "2026-11-20 22:38:19",
-  "best_model": "Gradient Boosting",
-  "holdout_split_date": "2024-10-19",
-  "train_rows": 4672,
-  "holdout_rows": 1184,
-  "total_rows": 5856,
+  "timestamp": "2026-11-20 23:45:14",
+  "best_model": "Random Forest",
+  "holdout_split_date": "2024-05-30",
+  "train_rows": 18465,
+  "holdout_rows": 6480,
+  "total_rows": 24945,
+  "dataset_name": "Kaggle FMCG 2022-2024",
   "models": {
     "Ridge Regression": {
-      "mae": 14.533,
-      "rmse": 25.2607,
-      "r2": 0.754,
-      "wape": 0.207,
+      "mae": 25.2256,
+      "rmse": 32.595,
+      "r2": 0.4619,
+      "wape": 0.1796,
       "best_params": {
-        "alpha": 50.0
+        "alpha": 0.1
       }
     },
     "Random Forest": {
-      "mae": 13.6186,
-      "rmse": 24.6472,
-      "r2": 0.7658,
-      "wape": 0.194,
+      "mae": 25.127,
+      "rmse": 32.4599,
+      "r2": 0.4664,
+      "wape": 0.1789,
       "best_params": {
-        "n_estimators": 60,
-        "min_samples_split": 5,
-        "max_depth": 10
+        "n_estimators": 30,
+        "min_samples_split": 2,
+        "max_depth": 6
       }
     },
     "Gradient Boosting": {
-      "mae": 13.2868,
-      "rmse": 23.7184,
-      "r2": 0.7831,
-      "wape": 0.1893,
+      "mae": 25.7029,
+      "rmse": 32.8843,
+      "r2": 0.4523,
+      "wape": 0.183,
       "best_params": {
-        "max_leaf_nodes": 31,
+        "max_leaf_nodes": 15,
         "max_iter": 40,
-        "learning_rate": 0.1
+        "learning_rate": 0.05
       }
     }
   },
   "feature_importances": [
     {
-      "feature": "rolling_mean_30",
-      "importance": 0.68464
-    },
-    {
-      "feature": "promotion",
-      "importance": 0.18199
-    },
-    {
-      "feature": "day_of_week",
-      "importance": 0.07172
-    },
-    {
-      "feature": "price",
-      "importance": 0.01934
-    },
-    {
-      "feature": "holiday",
-      "importance": 0.01545
-    },
-    {
-      "feature": "price_ratio",
-      "importance": 0.01073
-    },
-    {
-      "feature": "lag_14",
-      "importance": 0.00564
-    },
-    {
-      "feature": "lag_1",
-      "importance": 0.00389
-    },
-    {
       "feature": "rolling_mean_7",
-      "importance": 0.00328
+      "importance": 0.47731
     },
     {
-      "feature": "competitor_price",
-      "importance": 0.00184
+      "feature": "rolling_mean_30",
+      "importance": 0.34061
     },
     {
-      "feature": "product_encoded",
-      "importance": 0.00082
-    },
-    {
-      "feature": "rolling_std_7",
-      "importance": 0.00065
+      "feature": "promotion_flag",
+      "importance": 0.14191
     },
     {
       "feature": "month",
-      "importance": 0.0
+      "importance": 0.01412
     },
     {
-      "feature": "is_weekend",
-      "importance": 0.0
+      "feature": "rolling_std_7",
+      "importance": 0.0053
+    },
+    {
+      "feature": "lag_1",
+      "importance": 0.00529
+    },
+    {
+      "feature": "price_unit",
+      "importance": 0.00451
+    },
+    {
+      "feature": "product_encoded",
+      "importance": 0.00404
+    },
+    {
+      "feature": "lag_14",
+      "importance": 0.00309
     },
     {
       "feature": "lag_7",
+      "importance": 0.003
+    },
+    {
+      "feature": "day_of_week",
+      "importance": 0.00082
+    },
+    {
+      "feature": "is_weekend",
       "importance": 0.0
     }
   ]

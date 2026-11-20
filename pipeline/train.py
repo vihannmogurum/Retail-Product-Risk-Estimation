@@ -7,11 +7,13 @@ Trains and compares:
 2. Random Forest Regressor (tree ensemble)
 3. HistGradientBoostingRegressor (gradient boosting)
 
+Using Kaggle FMCG Dataset (FMCG_2022_2024.csv, aggregated to daily SKU totals).
 Chronological 80/20 train/test holdout split.
 Hyperparameter tuning via TimeSeriesSplit RandomizedSearchCV.
 Outputs:
 - artifacts/model_comparison.json
 - artifacts/demand_model.joblib
+- artifacts/best_model.joblib
 - artifacts/metrics.json
 - artifacts/sku_metadata.json
 """
@@ -23,8 +25,9 @@ import joblib
 import numpy as np
 import pandas as pd
 from datetime import datetime
+from typing import Dict, Any
 
-# Ensure project root and script directory are in sys.path
+# Ensure project root is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.insert(0, os.getcwd())
 
@@ -39,18 +42,16 @@ try:
         engineer_features,
         FEATURE_COLUMNS,
         TARGET_COLUMN,
+        FMCG_SKUS,
         PRODUCT_MAP,
-        SKU_TO_PRODUCT,
-        PRODUCT_TO_SKU,
     )
 except ImportError:
     from features import (
         engineer_features,
         FEATURE_COLUMNS,
         TARGET_COLUMN,
+        FMCG_SKUS,
         PRODUCT_MAP,
-        SKU_TO_PRODUCT,
-        PRODUCT_TO_SKU,
     )
 
 def compute_wape(y_true: np.ndarray, y_pred: np.ndarray) -> float:
@@ -60,17 +61,15 @@ def compute_wape(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     return float(np.sum(np.abs(y_true - y_pred)) / denom)
 
 def run_train_pipeline(
-    data_path: str = "data/retail_sales.csv",
+    data_path: str = "data/FMCG_2022_2024.csv",
     artifacts_dir: str = "artifacts"
 ) -> Dict[str, Any]:
     os.makedirs(artifacts_dir, exist_ok=True)
 
     if not os.path.exists(data_path):
-        from data.generate_data import generate_retail_sales_dataset
-        print(f"Dataset {data_path} not found. Generating fresh dataset...")
-        generate_retail_sales_dataset(output_path=data_path)
+        data_path = "data/retail_sales.csv"
 
-    print(f"Reading dataset from {data_path}...")
+    print(f"Reading dataset from {data_path}...", flush=True)
     raw_df = pd.read_csv(data_path)
     df = engineer_features(raw_df, fill_lags=True)
 
@@ -85,16 +84,16 @@ def run_train_pipeline(
     train_df = df[df["date"] < split_date].copy()
     test_df = df[df["date"] >= split_date].copy()
 
-    print(f"Dataset shape: {df.shape}")
-    print(f"Train split: {len(train_df)} rows ({train_df['date'].min().strftime('%Y-%m-%d')} to {train_df['date'].max().strftime('%Y-%m-%d')})")
-    print(f"Holdout split: {len(test_df)} rows ({test_df['date'].min().strftime('%Y-%m-%d')} to {test_df['date'].max().strftime('%Y-%m-%d')})")
+    print(f"Aggregated daily dataset shape: {df.shape}", flush=True)
+    print(f"Train split: {len(train_df)} rows ({train_df['date'].min().strftime('%Y-%m-%d')} to {train_df['date'].max().strftime('%Y-%m-%d')})", flush=True)
+    print(f"Holdout split: {len(test_df)} rows ({test_df['date'].min().strftime('%Y-%m-%d')} to {test_df['date'].max().strftime('%Y-%m-%d')})", flush=True)
 
     X_train = train_df[FEATURE_COLUMNS]
     y_train = train_df[TARGET_COLUMN].values
     X_test = test_df[FEATURE_COLUMNS]
     y_test = test_df[TARGET_COLUMN].values
 
-    # Preprocessing scaler
+    # Scaler
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
@@ -105,19 +104,19 @@ def run_train_pipeline(
     models_config = {
         "Ridge Regression": {
             "model": Ridge(random_state=42),
-            "params": {"alpha": [0.01, 0.1, 1.0, 10.0, 50.0]},
+            "params": {"alpha": [0.1, 1.0, 10.0, 50.0]},
             "scale": True,
-            "n_iter": 5,
+            "n_iter": 4,
         },
         "Random Forest": {
             "model": RandomForestRegressor(random_state=42, n_jobs=1),
             "params": {
-                "n_estimators": [30, 60],
+                "n_estimators": [30, 50],
                 "max_depth": [6, 10],
                 "min_samples_split": [2, 5],
             },
             "scale": False,
-            "n_iter": 4,
+            "n_iter": 3,
         },
         "Gradient Boosting": {
             "model": HistGradientBoostingRegressor(random_state=42),
@@ -127,7 +126,7 @@ def run_train_pipeline(
                 "max_leaf_nodes": [15, 31],
             },
             "scale": False,
-            "n_iter": 4,
+            "n_iter": 3,
         },
     }
 
@@ -177,43 +176,64 @@ def run_train_pipeline(
             best_name = name
             best_model_obj = best_estimator
 
-    print(f"\nWinning Model: {best_name} with Holdout WAPE: {best_wape*100:.2f}%")
+    print(f"\nWinning Model: {best_name} with Holdout WAPE: {best_wape*100:.2f}%", flush=True)
 
-    # SKU / Product Metadata and Residual Standard Deviations for Risk Engine
+    # SKU Metadata and Residual Standard Deviations for Risk Engine
     test_df["predicted_demand"] = model_predictions[best_name]
     test_df["residual"] = test_df[TARGET_COLUMN] - test_df["predicted_demand"]
 
-    product_metadata = {}
-    for pid in PRODUCT_MAP.keys():
+    sku_metadata = {}
+    for pid in sorted(df["product_id"].unique()):
         sub_df = test_df[test_df["product_id"] == pid]
         if sub_df.empty:
             sub_df = df[df["product_id"] == pid]
 
-        p_name = sub_df["product_name"].iloc[0] if "product_name" in sub_df.columns else pid
-        category = sub_df["category"].iloc[0] if "category" in sub_df.columns else "General"
-        sku_id = sub_df["sku_id"].iloc[0] if "sku_id" in sub_df.columns else PRODUCT_TO_SKU.get(pid, "SKU-001")
-        base_price = float(sub_df["base_price"].iloc[0]) if "base_price" in sub_df.columns else float(sub_df["price"].mean())
-        lead_time = int(sub_df["lead_time_days"].iloc[0]) if "lead_time_days" in sub_df.columns else 7
-        
+        brand = sub_df["brand"].iloc[0] if "brand" in sub_df.columns else "Brand"
+        segment = sub_df["segment"].iloc[0] if "segment" in sub_df.columns else "Standard"
+        category = sub_df["category"].iloc[0] if "category" in sub_df.columns else "FMCG"
+        product_name = f"{brand} {segment} ({pid})"
+
+        base_price = float(sub_df["price_unit"].iloc[-1]) if "price_unit" in sub_df.columns else 10.0
+        lead_time = int(sub_df["delivery_days"].iloc[-1]) if "delivery_days" in sub_df.columns else 3
+        if lead_time <= 0:
+            lead_time = 3
+
         res_std = float(sub_df["residual"].std()) if "residual" in sub_df.columns and not sub_df["residual"].empty else 5.0
         if np.isnan(res_std) or res_std < 1.0:
             res_std = max(1.5, float(sub_df[TARGET_COLUMN].std() * 0.4))
 
         mean_demand = float(sub_df[TARGET_COLUMN].mean())
         mean_pred = float(sub_df["predicted_demand"].mean()) if "predicted_demand" in sub_df.columns else mean_demand
-        recent_inv = int(sub_df["inventory_level"].iloc[-1]) if "inventory_level" in sub_df.columns else int(mean_demand * lead_time)
+        
+        # Recent stock available
+        stock_col = "stock_available" if "stock_available" in sub_df.columns else ("current_stock" if "current_stock" in sub_df.columns else "inventory_level")
+        recent_inv = int(sub_df[stock_col].iloc[-1]) if stock_col in sub_df.columns else int(mean_demand * lead_time * 2)
 
-        product_metadata[pid] = {
+        # Recent lag/rolling values for quick prefilling
+        last_row = sub_df.iloc[-1]
+        sku_metadata[pid] = {
             "product_id": pid,
-            "sku_id": sku_id,
-            "product_name": p_name,
+            "sku_id": pid,
+            "sku": pid,
+            "product_name": product_name,
+            "brand": brand,
+            "segment": segment,
             "category": category,
             "base_price": round(base_price, 2),
+            "price_unit": round(base_price, 2),
             "lead_time_days": lead_time,
+            "delivery_days": lead_time,
             "demand_std": round(res_std, 2),
+            "rolling_std_7": round(float(last_row.get("rolling_std_7", res_std)), 2),
             "historical_mean_demand": round(mean_demand, 2),
             "predicted_mean_demand": round(mean_pred, 2),
             "recent_inventory": recent_inv,
+            "current_stock": recent_inv,
+            "lag_1": round(float(last_row.get("lag_1", mean_demand)), 1),
+            "lag_7": round(float(last_row.get("lag_7", mean_demand)), 1),
+            "lag_14": round(float(last_row.get("lag_14", mean_demand)), 1),
+            "rolling_mean_7": round(float(last_row.get("rolling_mean_7", mean_demand)), 1),
+            "rolling_mean_30": round(float(last_row.get("rolling_mean_30", mean_demand)), 1),
         }
 
     # Extract feature importance
@@ -234,7 +254,7 @@ def run_train_pipeline(
     else:
         from sklearn.inspection import permutation_importance
         X_eval = X_test_scaled if models_config[best_name]["scale"] else X_test
-        perm = permutation_importance(best_model_obj, X_eval, y_test, n_repeats=3, random_state=42)
+        perm = permutation_importance(best_model_obj, X_eval, y_test, n_repeats=2, random_state=42)
         raw_imp = np.maximum(0, perm.importances_mean)
         s = np.sum(raw_imp) or 1.0
         feature_importance_list = [
@@ -242,7 +262,7 @@ def run_train_pipeline(
             for col, imp in sorted(zip(FEATURE_COLUMNS, raw_imp), key=lambda x: x[1], reverse=True)
         ]
 
-    # Required output 1: artifacts/model_comparison.json
+    # Model comparison payload
     model_comparison_payload = {
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "best_model": best_name,
@@ -250,6 +270,7 @@ def run_train_pipeline(
         "train_rows": len(train_df),
         "holdout_rows": len(test_df),
         "total_rows": len(df),
+        "dataset_name": "Kaggle FMCG 2022-2024",
         "models": {
             k: {
                 "mae": v["mae"],
@@ -262,21 +283,20 @@ def run_train_pipeline(
         },
         "feature_importances": feature_importance_list,
     }
+
+    # Save artifacts
     model_comparison_file = os.path.join(artifacts_dir, "model_comparison.json")
     with open(model_comparison_file, "w", encoding="utf-8") as f:
         json.dump(model_comparison_payload, f, indent=2)
 
-    # Also save standard metrics.json
     with open(os.path.join(artifacts_dir, "metrics.json"), "w", encoding="utf-8") as f:
         json.dump(model_comparison_payload, f, indent=2)
 
-    # Save sku_metadata.json
     sku_metadata_file = os.path.join(artifacts_dir, "sku_metadata.json")
     with open(sku_metadata_file, "w", encoding="utf-8") as f:
-        json.dump(product_metadata, f, indent=2)
+        json.dump(sku_metadata, f, indent=2)
 
-    # Required output 2: artifacts/demand_model.joblib
-    # Stores winning model + feature metadata package
+    # Demand model joblib
     demand_model_bundle = {
         "model": best_model_obj,
         "best_model_name": best_name,
@@ -285,22 +305,18 @@ def run_train_pipeline(
         "scale_features": models_config[best_name]["scale"],
         "scaler": scaler,
         "product_map": PRODUCT_MAP,
-        "sku_to_product": SKU_TO_PRODUCT,
-        "product_to_sku": PRODUCT_TO_SKU,
-        "product_metadata": product_metadata,
+        "sku_metadata": sku_metadata,
         "train_date_range": [train_df["date"].min().strftime("%Y-%m-%d"), train_df["date"].max().strftime("%Y-%m-%d")],
         "test_date_range": [test_df["date"].min().strftime("%Y-%m-%d"), test_df["date"].max().strftime("%Y-%m-%d")],
     }
     demand_model_file = os.path.join(artifacts_dir, "demand_model.joblib")
     joblib.dump(demand_model_bundle, demand_model_file)
-
-    # Also mirror to best_model.joblib for redundancy
     joblib.dump(demand_model_bundle, os.path.join(artifacts_dir, "best_model.joblib"))
 
-    print("\nTraining completed successfully!")
-    print(f"Emitted: {model_comparison_file}")
-    print(f"Emitted: {demand_model_file}")
-    print(f"Emitted: {sku_metadata_file}")
+    print("\nFMCG Training completed successfully!", flush=True)
+    print(f"Emitted: {model_comparison_file}", flush=True)
+    print(f"Emitted: {demand_model_file}", flush=True)
+    print(f"Emitted: {sku_metadata_file}", flush=True)
 
     return model_comparison_payload
 

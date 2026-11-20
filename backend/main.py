@@ -7,7 +7,7 @@ Exact Routes:
 - GET /api/metrics
 - GET /api/products and GET /api/skus
 - POST /api/predict
-- POST /api/batch-predict and POST /api/predict/batch (multipart CSV)
+- POST /api/batch-predict and POST /api/predict/batch (multipart CSV & JSON)
 - GET /api/export/batch-template
 - GET /api/history
 - Single-port static mount of frontend at /
@@ -42,22 +42,22 @@ try:
     from pipeline.features import (
         FEATURE_COLUMNS,
         PRODUCT_MAP,
-        SKU_TO_PRODUCT,
-        PRODUCT_TO_SKU,
+        FMCG_SKUS,
+        aggregate_fmcg_daily,
     )
 except ImportError:
     from features import (
         FEATURE_COLUMNS,
         PRODUCT_MAP,
-        SKU_TO_PRODUCT,
-        PRODUCT_TO_SKU,
+        FMCG_SKUS,
+        aggregate_fmcg_daily,
     )
 
 START_TIME = time.time()
 
 app = FastAPI(
     title="Project 41: Retail Product Demand Estimation and Stockout Risk Analysis-III",
-    description="Enterprise API for demand forecasting and inventory stockout risk quantification.",
+    description="Enterprise API for demand forecasting and inventory stockout risk quantification on FMCG Dataset.",
     version="3.0.0",
 )
 
@@ -89,7 +89,7 @@ def load_system_artifacts():
     sku_path = os.path.join(artifacts_dir, "sku_metadata.json")
 
     if not os.path.exists(model_path) or not os.path.exists(comp_path):
-        print("Artifacts missing. Running pipeline/train.py...")
+        print("Artifacts missing. Running pipeline/train.py...", flush=True)
         from pipeline.train import run_train_pipeline
         run_train_pipeline()
 
@@ -106,17 +106,22 @@ def load_system_artifacts():
 load_system_artifacts()
 
 class PredictionRequest(BaseModel):
-    product_id: Optional[str] = Field(None, example="PRD-01")
-    sku_id: Optional[str] = Field(None, example="SKU-E101")
-    date: Optional[str] = Field(None, example="2025-01-15")
-    current_stock: Optional[int] = Field(None, example=85)
-    inventory_level: Optional[int] = Field(None, example=85) # backward-compatible alias
-    lead_time_days: Optional[int] = Field(None, example=7)
-    demand_multiplier: Optional[float] = Field(1.0, example=1.0)
-    price: Optional[float] = Field(None, example=289.99)
-    competitor_price: Optional[float] = Field(None, example=295.00)
-    promotion: Optional[int] = Field(0, example=1)
-    holiday: Optional[int] = Field(0, example=0)
+    product_id: Optional[str] = None
+    sku_id: Optional[str] = None
+    sku: Optional[str] = None
+    date: Optional[str] = None
+    current_stock: Optional[int] = None
+    inventory_level: Optional[int] = None
+    stock_available: Optional[int] = None
+    lead_time_days: Optional[int] = None
+    delivery_days: Optional[int] = None
+    demand_multiplier: Optional[float] = 1.0
+    price: Optional[float] = None
+    price_unit: Optional[float] = None
+    competitor_price: Optional[float] = None
+    promotion: Optional[int] = 0
+    promotion_flag: Optional[int] = 0
+    holiday: Optional[int] = 0
     # Optional lag overrides
     lag_1: Optional[float] = None
     lag_7: Optional[float] = None
@@ -126,36 +131,44 @@ class PredictionRequest(BaseModel):
     rolling_mean_30: Optional[float] = None
 
 def resolve_product(pid: Optional[str], sku: Optional[str]) -> str:
-    if pid and pid in PRODUCT_MAP:
-        return pid
-    if sku and sku in SKU_TO_PRODUCT:
-        return SKU_TO_PRODUCT[sku]
-    if pid and pid in SKU_TO_PRODUCT:
-        return SKU_TO_PRODUCT[pid]
-    return "PRD-01"
+    candidate = pid or sku
+    if candidate:
+        clean = candidate.strip().upper()
+        if clean in PRODUCT_MAP:
+            return clean
+        # Match without prefix or substring
+        for k in PRODUCT_MAP.keys():
+            if clean == k or clean in k:
+                return k
+    return "MI-006" if "MI-006" in PRODUCT_MAP else list(PRODUCT_MAP.keys())[0]
 
 def predict_single_row(payload: PredictionRequest) -> Dict[str, Any]:
     global MODEL_BUNDLE, PRODUCT_METADATA
     if MODEL_BUNDLE is None:
         load_system_artifacts()
 
-    pid = resolve_product(payload.product_id, payload.sku_id)
+    pid = resolve_product(payload.product_id, payload.sku or payload.sku_id)
     meta = (PRODUCT_METADATA or {}).get(pid, {})
-    base_price = meta.get("base_price", 50.0)
-    price = float(payload.price if payload.price is not None else base_price)
-    comp_price = float(payload.competitor_price if payload.competitor_price is not None else price)
-    lead_time = int(payload.lead_time_days or meta.get("lead_time_days", 7))
 
-    # Resolve current stock
+    base_price = float(meta.get("base_price", meta.get("price_unit", 10.0)))
+    price = float(payload.price_unit if payload.price_unit is not None else (payload.price if payload.price is not None else base_price))
+    
+    lead_time = int(payload.delivery_days or payload.lead_time_days or meta.get("delivery_days", meta.get("lead_time_days", 3)))
+    if lead_time <= 0:
+        lead_time = 3
+
+    # Stock
     if payload.current_stock is not None:
         stock = int(payload.current_stock)
+    elif payload.stock_available is not None:
+        stock = int(payload.stock_available)
     elif payload.inventory_level is not None:
         stock = int(payload.inventory_level)
     else:
-        stock = int(meta.get("recent_inventory", 100))
+        stock = int(meta.get("recent_inventory", meta.get("current_stock", 150)))
 
-    rolling_std_7 = float(payload.rolling_std_7 if payload.rolling_std_7 is not None else meta.get("demand_std", 6.0))
-    mean_demand = float(meta.get("historical_mean_demand", 35.0))
+    rolling_std_7 = float(payload.rolling_std_7 if payload.rolling_std_7 is not None else meta.get("rolling_std_7", meta.get("demand_std", 5.0)))
+    mean_demand = float(meta.get("historical_mean_demand", 25.0))
     multiplier = float(payload.demand_multiplier or 1.0)
     multiplier = max(0.01, min(multiplier, 10.0))
 
@@ -169,14 +182,15 @@ def predict_single_row(payload: PredictionRequest) -> Dict[str, Any]:
     day_of_week = dt.dayofweek
     month = dt.month
     is_weekend = 1 if day_of_week in [5, 6] else 0
-    price_ratio = price / max(comp_price, 0.01)
 
-    lag_1 = float(payload.lag_1 if payload.lag_1 is not None else mean_demand)
-    lag_7 = float(payload.lag_7 if payload.lag_7 is not None else mean_demand)
-    lag_14 = float(payload.lag_14 if payload.lag_14 is not None else mean_demand)
-    roll_m7 = float(payload.rolling_mean_7 if payload.rolling_mean_7 is not None else mean_demand)
+    lag_1 = float(payload.lag_1 if payload.lag_1 is not None else meta.get("lag_1", mean_demand))
+    lag_7 = float(payload.lag_7 if payload.lag_7 is not None else meta.get("lag_7", mean_demand))
+    lag_14 = float(payload.lag_14 if payload.lag_14 is not None else meta.get("lag_14", mean_demand))
+    roll_m7 = float(payload.rolling_mean_7 if payload.rolling_mean_7 is not None else meta.get("rolling_mean_7", mean_demand))
     roll_s7 = rolling_std_7
-    roll_m30 = float(payload.rolling_mean_30 if payload.rolling_mean_30 is not None else mean_demand)
+    roll_m30 = float(payload.rolling_mean_30 if payload.rolling_mean_30 is not None else meta.get("rolling_mean_30", mean_demand))
+
+    promo_flag = int(payload.promotion_flag if payload.promotion_flag is not None else (payload.promotion or 0))
 
     features = {
         "day_of_week": day_of_week,
@@ -188,11 +202,8 @@ def predict_single_row(payload: PredictionRequest) -> Dict[str, Any]:
         "rolling_mean_7": roll_m7,
         "rolling_std_7": roll_s7,
         "rolling_mean_30": roll_m30,
-        "price": price,
-        "competitor_price": comp_price,
-        "price_ratio": price_ratio,
-        "promotion": int(payload.promotion or 0),
-        "holiday": int(payload.holiday or 0),
+        "price_unit": price,
+        "promotion_flag": promo_flag,
         "product_encoded": PRODUCT_MAP.get(pid, 0),
     }
 
@@ -218,15 +229,18 @@ def predict_single_row(payload: PredictionRequest) -> Dict[str, Any]:
 
     return {
         "product_id": pid,
-        "sku_id": meta.get("sku_id", PRODUCT_TO_SKU.get(pid, "SKU-001")),
-        "product_name": meta.get("product_name", pid),
+        "sku_id": pid,
+        "sku": pid,
+        "product_name": meta.get("product_name", f"{meta.get('brand', 'FMCG')} {meta.get('segment', 'Standard')} ({pid})"),
+        "brand": meta.get("brand", "FMCG"),
+        "segment": meta.get("segment", "Standard"),
         "category": meta.get("category", "General"),
         "date": req_date,
         "demand_multiplier": multiplier,
         "price": price,
-        "competitor_price": comp_price,
-        "promotion": features["promotion"],
-        "holiday": features["holiday"],
+        "price_unit": price,
+        "promotion": promo_flag,
+        "promotion_flag": promo_flag,
         "model_used": MODEL_BUNDLE.get("best_model_name", "Winning Regressor"),
         **risk_output,
     }
@@ -290,20 +304,33 @@ async def batch_predict(
             except Exception as e:
                 raise HTTPException(status_code=400, detail=f"Invalid CSV format: {str(e)}")
 
+            # Aggregate if raw FMCG schema
+            if df.duplicated(subset=["date", "sku"] if "sku" in df.columns else ["date", "product_id"]).any():
+                df = aggregate_fmcg_daily(df)
+
             for _, row in df.iterrows():
                 item = PredictionRequest(
-                    product_id=str(row.get("product_id")) if pd.notna(row.get("product_id")) else None,
+                    product_id=str(row.get("product_id")) if pd.notna(row.get("product_id")) else (
+                        str(row.get("sku")) if pd.notna(row.get("sku")) else None
+                    ),
+                    sku=str(row.get("sku")) if pd.notna(row.get("sku")) else None,
                     sku_id=str(row.get("sku_id")) if pd.notna(row.get("sku_id")) else None,
                     date=str(row.get("date")) if pd.notna(row.get("date")) else None,
                     current_stock=int(row.get("current_stock")) if pd.notna(row.get("current_stock")) else (
-                        int(row.get("inventory_level")) if pd.notna(row.get("inventory_level")) else 100
+                        int(row.get("stock_available")) if pd.notna(row.get("stock_available")) else (
+                            int(row.get("inventory_level")) if pd.notna(row.get("inventory_level")) else 100
+                        )
                     ),
-                    lead_time_days=int(row.get("lead_time_days")) if pd.notna(row.get("lead_time_days")) else None,
+                    lead_time_days=int(row.get("lead_time_days")) if pd.notna(row.get("lead_time_days")) else (
+                        int(row.get("delivery_days")) if pd.notna(row.get("delivery_days")) else None
+                    ),
                     demand_multiplier=float(row.get("demand_multiplier")) if pd.notna(row.get("demand_multiplier")) else 1.0,
-                    price=float(row.get("price")) if pd.notna(row.get("price")) else None,
-                    competitor_price=float(row.get("competitor_price")) if pd.notna(row.get("competitor_price")) else None,
-                    promotion=int(row.get("promotion")) if pd.notna(row.get("promotion")) else 0,
-                    holiday=int(row.get("holiday")) if pd.notna(row.get("holiday")) else 0,
+                    price=float(row.get("price")) if pd.notna(row.get("price")) else (
+                        float(row.get("price_unit")) if pd.notna(row.get("price_unit")) else None
+                    ),
+                    promotion=int(row.get("promotion")) if pd.notna(row.get("promotion")) else (
+                        int(row.get("promotion_flag")) if pd.notna(row.get("promotion_flag")) else 0
+                    ),
                 )
                 items.append(item)
     elif "application/json" in content_type:
@@ -318,8 +345,8 @@ async def batch_predict(
             pass
 
     if not items:
-        for pid in PRODUCT_MAP.keys():
-            items.append(PredictionRequest(product_id=pid, current_stock=60, promotion=0, holiday=0))
+        for pid in list(PRODUCT_MAP.keys())[:10]:
+            items.append(PredictionRequest(product_id=pid, current_stock=60, promotion=0))
 
     results = []
     critical_count = 0
@@ -357,26 +384,30 @@ async def batch_predict(
 @app.get("/api/export/batch-template")
 def export_batch_template():
     csv_content = (
-        "product_id,date,current_stock,lead_time_days,demand_multiplier,price,competitor_price,promotion,holiday\n"
-        "PRD-01,2025-02-01,45,7,1.0,289.99,295.00,0,0\n"
-        "PRD-02,2025-02-01,25,5,1.2,139.99,145.00,1,0\n"
-        "PRD-05,2025-02-01,110,3,1.0,17.50,18.00,0,0\n"
-        "PRD-09,2025-02-01,15,10,1.0,85.00,88.00,0,0\n"
-        "PRD-13,2025-02-01,20,8,1.0,124.99,129.99,0,0\n"
+        "product_id,date,current_stock,lead_time_days,demand_multiplier,price,promotion\n"
+        "MI-006,2025-02-01,150,3,1.0,4.25,0\n"
+        "YO-029,2025-02-01,80,2,1.2,2.80,1\n"
+        "RE-004,2025-02-01,40,4,1.0,8.50,0\n"
+        "JU-021,2025-02-01,200,3,1.0,3.10,0\n"
+        "SN-010,2025-02-01,35,5,1.0,1.95,0\n"
     )
     return Response(
         content=csv_content,
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=retail_risk_batch_template.csv"}
+        headers={"Content-Disposition": "attachment; filename=fmcg_risk_batch_template.csv"}
     )
 
 @app.get("/api/history")
-def get_sample_history(product_id: Optional[str] = "PRD-01"):
-    data_path = "data/retail_sales.csv"
+def get_sample_history(product_id: Optional[str] = "MI-006"):
+    data_path = "data/FMCG_2022_2024.csv"
+    if not os.path.exists(data_path):
+        data_path = "data/retail_sales.csv"
     if not os.path.exists(data_path):
         return []
 
-    df = pd.read_csv(data_path)
+    raw_df = pd.read_csv(data_path)
+    df = aggregate_fmcg_daily(raw_df)
+
     pid = resolve_product(product_id, None)
     sub = df[df["product_id"] == pid].tail(30)
 
@@ -385,9 +416,9 @@ def get_sample_history(product_id: Optional[str] = "PRD-01"):
         records.append({
             "date": str(r["date"]),
             "units_sold": int(r["units_sold"]),
-            "inventory_level": int(r["inventory_level"]),
-            "price": float(r["price"]),
-            "stockout_flag": int(r["stockout_flag"]),
+            "stock_available": int(r["stock_available"]) if "stock_available" in r else int(r.get("inventory_level", 0)),
+            "price_unit": float(r["price_unit"]) if "price_unit" in r else float(r.get("price", 0.0)),
+            "promotion_flag": int(r["promotion_flag"]) if "promotion_flag" in r else 0,
         })
     return records
 
